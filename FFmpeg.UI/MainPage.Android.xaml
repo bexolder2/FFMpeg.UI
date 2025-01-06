@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="FFmpeg.UI.MainPageAndroid"
+             xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
+             xmlns:vm="clr-namespace:FFmpeg.UI"
+             xmlns:models="clr-namespace:FFmpeg.UI.Models"
+             Title="MainPage.Android">
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <vm:MainViewModel x:Key="MainViewModel"/>
+            <toolkit:ItemTappedEventArgsConverter x:Key="ItemTappedEventArgsConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+
+    <Grid Padding="10" 
+          Margin="0,0,0,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="40"/>
+            <RowDefinition Height="50"/>
+            <RowDefinition Height="2*"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition/>
+                <ColumnDefinition/>
+            </Grid.ColumnDefinitions>
+
+            <Button Text="Add files"
+                    Margin="0,0,5,0"
+                    MaximumHeightRequest="40"
+                    Command="{Binding SelectFilesToProcessingCommand, Source={StaticResource MainViewModel}}"
+                    IsEnabled="{Binding IsUILocked, Source={StaticResource MainViewModel}, Converter={StaticResource InvertConverter}}"/>
+
+            <Button Grid.Column="1"
+                    Text="Clear queue"
+                    Margin="0,0,5,0"
+                    MaximumHeightRequest="40"
+                    Command="{Binding ClearSelectedFilesCommand, Source={StaticResource MainViewModel}}"
+                    IsEnabled="{Binding IsUILocked, Source={StaticResource MainViewModel}, Converter={StaticResource InvertConverter}}"/>
+        </Grid>
+
+        <HorizontalStackLayout Grid.Row="1"
+                               Margin="0,10,0,0">
+            <Button Text="Run processing"
+                    MaximumHeightRequest="40"
+                    IsEnabled="{Binding IsUILocked, Source={StaticResource MainViewModel}, Converter={StaticResource InvertConverter}}"
+                    Command="{Binding RunStabilizationTaskCommand, Source={StaticResource MainViewModel}}"/>
+            <CheckBox Color="{StaticResource PrimaryDark}"
+                      IsChecked="{Binding IsNeedGenerateMerged, Source={StaticResource MainViewModel}, Mode=TwoWay}"
+                      IsEnabled="{Binding IsUILocked, Source={StaticResource MainViewModel}, Converter={StaticResource InvertConverter}}"/>
+            <Label Text="Generate merged video"
+                   VerticalTextAlignment="Center"
+                   TextColor="{StaticResource Gray500}"/>
+        </HorizontalStackLayout>
+
+        <ListView x:Name="FilesList"
+                  Margin="0,10,0,0"
+                  Grid.Row="2"
+                  ItemsSource="{Binding SelectedFiles, Source={StaticResource MainViewModel}}">
+            <ListView.Behaviors>
+                <toolkit:EventToCommandBehavior EventName="ItemTapped"
+                                            Command="{Binding PlayPreviewCommand, Source={StaticResource MainViewModel}}"
+                                            EventArgsConverter="{StaticResource ItemTappedEventArgsConverter}"/>
+            </ListView.Behaviors>
+
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="models:UIFile">
+                    <ViewCell>
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="3*"/>
+                            </Grid.ColumnDefinitions>
+
+                            <Label Text="{Binding Name}" 
+                               LineBreakMode="TailTruncation"/>
+                            <Label Text="{Binding Path}"
+                               Grid.Column="1"
+                               LineBreakMode="MiddleTruncation"/>
+                        </Grid>
+                    </ViewCell>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+
+        <Editor Grid.Row="3"
+                Margin="0,10,0,0"
+                Text="{Binding LogData, Source={StaticResource MainViewModel}}"
+                TextChanged="Editor_TextChanged"/>
+    </Grid>
+</ContentPage>
