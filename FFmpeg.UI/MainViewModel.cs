@@ -8,6 +8,8 @@ namespace FFmpeg.UI
 {
     public partial class MainViewModel : ObservableObject
     {
+        private readonly int MaximumConcurrencyCount = Environment.ProcessorCount / 2;
+
         private const string GenerateStabDataCommand = "-i \"{0}\" -vf vidstabdetect -f null -"; 
         private const string StabVideoCommand = "-i \"{0}\" -vf vidstabtransform \"{1}\"";
         private const string MergeVideosVertically = "-i {0} -i {1} -filter_complex vstack=inputs=2 {2}";
@@ -52,7 +54,9 @@ namespace FFmpeg.UI
         public void ClearSelectedFiles()
         {
             selectedFiles = null;
+            logData = string.Empty;
             OnPropertyChanged(nameof(SelectedFiles));
+            OnPropertyChanged(nameof(LogData));
         }
 
         [RelayCommand]
@@ -60,7 +64,7 @@ namespace FFmpeg.UI
         {
             var platform = DeviceInfo.Current.Platform;
             UpdateUILockState(true);
-            List<Task> tasks = new List<Task>();
+            List<Func<Task>> tasks = [];
 
             if (platform == DevicePlatform.WinUI)
             {
@@ -68,47 +72,7 @@ namespace FFmpeg.UI
                 {
                     foreach (var file in selectedFiles.ToList())
                     {
-                        var tsk = Task.Run(async () => 
-                        {
-                            string videoFolderPath = Path.Combine(FileSystem.CacheDirectory, Path.GetFileNameWithoutExtension(file.Name));
-                            Debug.WriteLine($"Tmp folder path: {videoFolderPath}");
-                            try
-                            {
-                                Directory.CreateDirectory(videoFolderPath);
-                                await GenerateStabilizationDataAsync(file, videoFolderPath);
-                                string newFilePath = await StabilizeVideoAsync(file, videoFolderPath);
-                                if (!string.IsNullOrEmpty(newFilePath))
-                                {
-                                    Debug.WriteLine($"New file path: {newFilePath}");
-                                    string destinationPath = Path.Combine(Path.GetDirectoryName(file.Path), Path.GetFileName(newFilePath));
-                                    File.Copy(newFilePath, destinationPath, true);
-                                }
-
-                                if (isNeedGenerateMerged)
-                                {
-                                    string sourcePath = await MergeVideosAsync(file.Name, videoFolderPath);
-                                    string destinationPath = Path.Combine(Path.GetDirectoryName(file.Path), Path.GetFileName(sourcePath));
-                                    //TODO: Add queue for previews 
-                                    File.Copy(sourcePath, destinationPath);
-
-                                    if (selectedFiles.Count == 1)
-                                    {
-                                        MainThread.BeginInvokeOnMainThread(() =>
-                                        {
-                                            previewSource = MediaSource.FromUri(destinationPath);
-                                            OnPropertyChanged(nameof(PreviewSource));
-                                        });
-                                    }
-                                }
-                            }
-                            catch (Exception ex) { }
-                            finally
-                            {
-                                ClearTmp(videoFolderPath);
-                            }
-                        });
-
-                        tasks.Add(tsk);
+                        tasks.Add(() => ExecuteStabilizationTaskWindowsAsync(file));
                     }
                 }
             }
@@ -117,7 +81,7 @@ namespace FFmpeg.UI
                 throw new NotImplementedException();
             }
 
-            await Task.WhenAll(tasks);
+            await RunWithMaxConcurrency(tasks);
             UpdateUILockState(false);
         }
 
@@ -128,6 +92,66 @@ namespace FFmpeg.UI
             {
                 previewSource = MediaSource.FromUri(file.Path);
                 OnPropertyChanged(nameof(PreviewSource));
+            }
+        }
+
+        private async Task RunWithMaxConcurrency(IEnumerable<Func<Task>> tasks)
+        {
+            using var semaphore = new SemaphoreSlim(MaximumConcurrencyCount);
+
+            var tasks_ = tasks.Select(async task =>
+            {
+                await semaphore.WaitAsync();
+                try
+                {
+                    await task();
+                }
+                finally
+                {
+                    semaphore.Release();
+                }
+            });
+
+            await Task.WhenAll(tasks_);
+        }
+
+        private async Task ExecuteStabilizationTaskWindowsAsync(UIFile file)
+        {
+            string videoFolderPath = Path.Combine(FileSystem.CacheDirectory, Path.GetFileNameWithoutExtension(file.Name));
+            Debug.WriteLine($"Tmp folder path: {videoFolderPath}");
+            try
+            {
+                Directory.CreateDirectory(videoFolderPath);
+                await GenerateStabilizationDataAsync(file, videoFolderPath);
+                string newFilePath = await StabilizeVideoAsync(file, videoFolderPath);
+                if (!string.IsNullOrEmpty(newFilePath))
+                {
+                    Debug.WriteLine($"New file path: {newFilePath}");
+                    string destinationPath = Path.Combine(Path.GetDirectoryName(file.Path), Path.GetFileName(newFilePath));
+                    File.Copy(newFilePath, destinationPath, true);
+                }
+
+                if (isNeedGenerateMerged)
+                {
+                    string sourcePath = await MergeVideosAsync(file.Name, videoFolderPath);
+                    string destinationPath = Path.Combine(Path.GetDirectoryName(file.Path), Path.GetFileName(sourcePath));
+                    //TODO: Add queue for previews 
+                    File.Copy(sourcePath, destinationPath);
+
+                    if (selectedFiles.Count == 1)
+                    {
+                        MainThread.BeginInvokeOnMainThread(() =>
+                        {
+                            previewSource = MediaSource.FromUri(destinationPath);
+                            OnPropertyChanged(nameof(PreviewSource));
+                        });
+                    }
+                }
+            }
+            catch (Exception ex) { }
+            finally
+            {
+                ClearTmp(videoFolderPath);
             }
         }
 
