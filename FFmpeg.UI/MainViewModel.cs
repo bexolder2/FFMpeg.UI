@@ -66,19 +66,15 @@ namespace FFmpeg.UI
             UpdateUILockState(true);
             List<Func<Task>> tasks = [];
 
-            if (platform == DevicePlatform.WinUI)
+            if (platform == DevicePlatform.WinUI || platform == DevicePlatform.Android)
             {
                 if (selectedFiles?.Count > 0)
                 {
                     foreach (var file in selectedFiles.ToList())
                     {
-                        tasks.Add(() => ExecuteStabilizationTaskWindowsAsync(file));
+                        tasks.Add(() => ExecuteStabilizationTaskAsync(file));
                     }
                 }
-            }
-            else if (platform == DevicePlatform.Android) 
-            {
-                throw new NotImplementedException();
             }
 
             await RunWithMaxConcurrency(tasks);
@@ -115,7 +111,7 @@ namespace FFmpeg.UI
             await Task.WhenAll(tasks_);
         }
 
-        private async Task ExecuteStabilizationTaskWindowsAsync(UIFile file)
+        private async Task ExecuteStabilizationTaskAsync(UIFile file)
         {
             string videoFolderPath = Path.Combine(FileSystem.CacheDirectory, Path.GetFileNameWithoutExtension(file.Name));
             Debug.WriteLine($"Tmp folder path: {videoFolderPath}");
@@ -238,6 +234,19 @@ namespace FFmpeg.UI
 
         private async Task RunFFmpegAsync(string args, string workDir)
         {
+            var platform = DeviceInfo.Current.Platform;
+            if (platform == DevicePlatform.WinUI)
+            {
+                await RunFFMpegWindowsAsync(args, workDir);
+            }
+            else if (platform == DevicePlatform.Android)
+            {
+                await RunFFMpegAndroidAsync(args, workDir);
+            }
+        }
+
+        private async Task RunFFMpegWindowsAsync(string args, string workDir)
+        {
             try
             {
                 var startInfo = new ProcessStartInfo
@@ -273,6 +282,27 @@ namespace FFmpeg.UI
                 Debug.WriteLine($"RunFFmpegAsync args: {args}");
                 Debug.WriteLine($"RunFFmpegAsync: {ex.Message}");
             }
+        }
+
+        private async Task RunFFMpegAndroidAsync(string args, string workDir)
+        {
+#if ANDROID
+            try
+            {
+                MainThread.BeginInvokeOnMainThread(async () =>
+                {
+                    var currentActivity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
+                    await FFMpeg.Xamarin.FFMpegLibrary.Run(currentActivity, args, (log) => {
+                        LogData += log + "\n";
+                        OnPropertyChanged(nameof(LogData));
+                    });
+                });
+            }
+            catch (Exception ex)
+            {
+
+            }
+#endif
         }
 
         private async Task ReadOutputAsync(StreamReader reader)
