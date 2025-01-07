@@ -20,25 +20,31 @@
 
         <HorizontalStackLayout>
             <Entry IsReadOnly="True"
+                   Text="{Binding FfmpegLocation, Source={StaticResource SettingsViewModel}}"
                    Placeholder="Local FFMpeg path"
                    ClearButtonVisibility="WhileEditing" 
                    HeightRequest="40"
                    WidthRequest="300"/>
 
             <Button Text="Select folder"
-                    MaximumHeightRequest="40"/>
+                    Margin="10,0,0,0"
+                    MaximumHeightRequest="40"
+                    Command="{Binding SelectFFMpegLocationCommand, Source={StaticResource SettingsViewModel}}"/>
         </HorizontalStackLayout>
 
         <HorizontalStackLayout Grid.Row="1"
                                Margin="0,10,0,0">
             <Entry IsReadOnly="True"
+                   Text="{Binding ResultsFolder, Source={StaticResource SettingsViewModel}}"
                    Placeholder="Custom results location"
                    ClearButtonVisibility="WhileEditing" 
                    HeightRequest="40"
                    WidthRequest="300"/>
 
             <Button Text="Select folder"
-                    MaximumHeightRequest="40"/>
+                    Margin="10,0,0,0"
+                    MaximumHeightRequest="40"
+                    Command="{Binding SelectCustomResultsFolderCommand, Source={StaticResource SettingsViewModel}}"/>
         </HorizontalStackLayout>
 
         <Label Grid.Row="2"
