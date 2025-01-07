@@ -115,6 +115,7 @@ namespace FFmpeg.UI
         {
             string videoFolderPath = Path.Combine(FileSystem.CacheDirectory, Path.GetFileNameWithoutExtension(file.Name));
             Debug.WriteLine($"Tmp folder path: {videoFolderPath}");
+            string customPath = Preferences.Default.Get(Constants.CustomResultsFolderKey, string.Empty);
             try
             {
                 Directory.CreateDirectory(videoFolderPath);
@@ -124,6 +125,11 @@ namespace FFmpeg.UI
                 {
                     Debug.WriteLine($"New file path: {newFilePath}");
                     string destinationPath = Path.Combine(Path.GetDirectoryName(file.Path), Path.GetFileName(newFilePath));
+                    
+                    if (!string.IsNullOrEmpty(customPath))
+                    {
+                        destinationPath = Path.Combine(customPath, Path.GetFileName(newFilePath));
+                    }
                     File.Copy(newFilePath, destinationPath, true);
                 }
 
@@ -131,6 +137,10 @@ namespace FFmpeg.UI
                 {
                     string sourcePath = await MergeVideosAsync(file.Name, videoFolderPath);
                     string destinationPath = Path.Combine(Path.GetDirectoryName(file.Path), Path.GetFileName(sourcePath));
+                    if (!string.IsNullOrEmpty(customPath))
+                    {
+                        destinationPath = Path.Combine(customPath, Path.GetFileName(sourcePath));
+                    }
                     //TODO: Add queue for previews 
                     File.Copy(sourcePath, destinationPath);
 
@@ -247,11 +257,21 @@ namespace FFmpeg.UI
 
         private async Task RunFFMpegWindowsAsync(string args, string workDir)
         {
+            string ffmpegLocation = Preferences.Default.Get(Constants.FFMpegLocationKey, string.Empty);
+            if (string.IsNullOrEmpty(ffmpegLocation))
+            {
+                ffmpegLocation = "ffmpeg.exe";
+            }
+            else
+            {
+                ffmpegLocation = Path.Combine(ffmpegLocation, "ffmpeg.exe");
+            }
+
             try
             {
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = "ffmpeg.exe", //TODO: add file picker
+                    FileName = ffmpegLocation,
                     WorkingDirectory = workDir,
                     Arguments = args,
                     UseShellExecute = false,
