@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Maui.Views;
+﻿using CommunityToolkit.Maui.Storage;
+using CommunityToolkit.Maui.Views;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FFmpeg.UI.Models;
@@ -11,9 +12,13 @@ namespace FFmpeg.UI
         private readonly int MaximumConcurrencyCount = Environment.ProcessorCount / 2;
 
         private const string GenerateStabDataCommand = "-i \"{0}\" -vf vidstabdetect -f null -"; 
+        private const string GenerateStabDataAndroidCommand = "-i \"{0}\" -vf vidstabdetect=result=\"{1}transforms.trf\" -f null -"; 
         private const string StabVideoCommand = "-i \"{0}\" -vf vidstabtransform \"{1}\"";
+        private const string StabVideoAndroidCommand = "-i \"{0}\" -vf \"vidstabtransform=input={1}/transforms.trf\" \"{2}\"";
         private const string MergeVideosVertically = "-i {0} -i {1} -filter_complex vstack=inputs=2 {2}";
         private const string MergeVideosHorizontally = "-i {0} -i {1} -filter_complex hstack=inputs=2 {2}";
+
+        private DevicePlatform platform = DeviceInfo.Current.Platform;
 
         [ObservableProperty]
         private bool isNeedGenerateMerged;
@@ -130,7 +135,15 @@ namespace FFmpeg.UI
                     {
                         destinationPath = Path.Combine(customPath, Path.GetFileName(newFilePath));
                     }
-                    File.Copy(newFilePath, destinationPath, true);
+
+                    if (platform == DevicePlatform.Android)
+                    {
+                        await SaveFileWithPickerAsync(newFilePath);
+                    }
+                    else if (platform == DevicePlatform.WinUI)
+                    {
+                        File.Copy(newFilePath, destinationPath, true);
+                    }
                 }
 
                 if (isNeedGenerateMerged)
@@ -141,10 +154,18 @@ namespace FFmpeg.UI
                     {
                         destinationPath = Path.Combine(customPath, Path.GetFileName(sourcePath));
                     }
-                    //TODO: Add queue for previews 
-                    File.Copy(sourcePath, destinationPath);
 
-                    if (selectedFiles.Count == 1)
+                    //TODO: Add queue for previews
+                    if (platform == DevicePlatform.Android)
+                    {
+                        await SaveFileWithPickerAsync(newFilePath);
+                    }
+                    else if (platform == DevicePlatform.WinUI)
+                    {
+                        File.Copy(sourcePath, destinationPath);
+                    }
+
+                    if (platform != DevicePlatform.Android && selectedFiles.Count == 1)
                     {
                         MainThread.BeginInvokeOnMainThread(() =>
                         {
@@ -161,6 +182,13 @@ namespace FFmpeg.UI
             }
         }
 
+        private async Task SaveFileWithPickerAsync(string path)
+        {
+            var fs = File.Open(path, FileMode.Open, FileAccess.ReadWrite, FileShare.ReadWrite);
+            await FileSaver.Default.SaveAsync(Path.GetFileName(path), fs);
+            await fs.DisposeAsync();
+        }
+
         private async Task GenerateStabilizationDataAsync(UIFile file, string tmpPath)
         {
             try
@@ -171,6 +199,11 @@ namespace FFmpeg.UI
                     Debug.WriteLine($"GenerateStabilizationDataAsync targetPath: {targetPath}");
                     File.Copy(file.Path, targetPath, true);
                     string combinedArgs = string.Format(GenerateStabDataCommand, targetPath);
+
+                    if (platform == DevicePlatform.Android)
+                    {
+                        combinedArgs = string.Format(GenerateStabDataAndroidCommand, targetPath, Path.GetDirectoryName(targetPath) + "/");
+                    }
                     Debug.WriteLine($"GenerateStabilizationDataAsync combinedArgs: {combinedArgs}");
                     await RunFFmpegAsync(combinedArgs, tmpPath);
                 }
@@ -190,7 +223,13 @@ namespace FFmpeg.UI
                 {
                     outFileName = Path.Combine(tmpPath, Path.GetFileNameWithoutExtension(file.Name) + "_stabilized" + Path.GetExtension(file.Name));
                     string targetPath = Path.Combine(tmpPath, file.Name);
-                    await RunFFmpegAsync(string.Format(StabVideoCommand, targetPath, outFileName), tmpPath);
+                    string combinedArgs = string.Format(StabVideoCommand, targetPath, outFileName);
+
+                    if (platform == DevicePlatform.Android)
+                    {
+                        combinedArgs = string.Format(StabVideoAndroidCommand, targetPath, Path.GetDirectoryName(outFileName), outFileName);
+                    }
+                    await RunFFmpegAsync(combinedArgs, tmpPath);
                 }
             }
             catch (Exception ex)
@@ -244,7 +283,6 @@ namespace FFmpeg.UI
 
         private async Task RunFFmpegAsync(string args, string workDir)
         {
-            var platform = DeviceInfo.Current.Platform;
             if (platform == DevicePlatform.WinUI)
             {
                 await RunFFMpegWindowsAsync(args, workDir);
@@ -306,23 +344,13 @@ namespace FFmpeg.UI
 
         private async Task RunFFMpegAndroidAsync(string args, string workDir)
         {
-#if ANDROID
             try
             {
-                MainThread.BeginInvokeOnMainThread(async () =>
-                {
-                    var currentActivity = Microsoft.Maui.ApplicationModel.Platform.CurrentActivity;
-                    await FFMpeg.Xamarin.FFMpegLibrary.Run(currentActivity, args, (log) => {
-                        LogData += log + "\n";
-                        OnPropertyChanged(nameof(LogData));
-                    });
-                });
+                Debug.WriteLine($"RunFFMpegAndroidAsync: {args}");
+                Laerdal.FFmpeg.FFmpegConfig.IgnoreSignal(24);
+                Laerdal.FFmpeg.FFmpeg.Execute(args);
             }
-            catch (Exception ex)
-            {
-
-            }
-#endif
+            catch (Exception ex) { }
         }
 
         private async Task ReadOutputAsync(StreamReader reader)

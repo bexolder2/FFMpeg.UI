@@ -48,12 +48,12 @@
                     MaximumHeightRequest="40"
                     IsEnabled="{Binding IsUILocked, Source={StaticResource MainViewModel}, Converter={StaticResource InvertConverter}}"
                     Command="{Binding RunStabilizationTaskCommand, Source={StaticResource MainViewModel}}"/>
-            <CheckBox Color="{StaticResource PrimaryDark}"
+            <!--<CheckBox Color="{StaticResource PrimaryDark}"
                       IsChecked="{Binding IsNeedGenerateMerged, Source={StaticResource MainViewModel}, Mode=TwoWay}"
-                      IsEnabled="{Binding IsUILocked, Source={StaticResource MainViewModel}, Converter={StaticResource InvertConverter}}"/>
-            <Label Text="Generate merged video"
+                      IsEnabled="{Binding IsUILocked, Source={StaticResource MainViewModel}, Converter={StaticResource InvertConverter}}"/>-->
+            <!--<Label Text="Generate merged video"
                    VerticalTextAlignment="Center"
-                   TextColor="{StaticResource Gray500}"/>
+                   TextColor="{StaticResource Gray500}"/>-->
         </HorizontalStackLayout>
 
         <ListView x:Name="FilesList"
