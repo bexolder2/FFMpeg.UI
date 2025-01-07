@@ -9,8 +9,4 @@
     <ShellContent ContentTemplate="{DataTemplate local:MainPageAndroid}"
                   Route="MainPageAndroid"/>
 
-    <ShellContent ContentTemplate="{DataTemplate local:SettingsPage}"
-                  Route="SettingsPage"
-                  Title="Settings"/>
-
 </Shell>
