@@ -5,7 +5,7 @@
              xmlns:toolkit="http://schemas.microsoft.com/dotnet/2022/maui/toolkit"
              xmlns:vm="clr-namespace:FFmpeg.UI"
              xmlns:models="clr-namespace:FFmpeg.UI.Models"
-             Title="MainPage.Android">
+             Title="Home">
     <ContentPage.Resources>
         <ResourceDictionary>
             <vm:MainViewModel x:Key="MainViewModel"/>
