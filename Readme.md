@@ -29,7 +29,7 @@ Android use [Laerdal.FFmpeg.Full.Gpl](https://github.com/Laerdal/Laerdal.FFmpeg)
 
 ## Roadmap
 
-- [ ] Video frame size changing
+- [x] Video frame size changing
 - [ ] Adding text to video
   
 ## Build
