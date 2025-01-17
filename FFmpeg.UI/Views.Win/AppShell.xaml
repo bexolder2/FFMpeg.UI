@@ -7,8 +7,13 @@
        Title="FFmpeg UI">
 
     <ShellContent ContentTemplate="{DataTemplate local:MainPage}"
-                  Route="MainPage"/>
+                  Route="MainPage"
+                  Title="Stabilizing"/>
 
+    <ShellContent ContentTemplate="{DataTemplate local:CutPage}"
+                  Route="CutPage"
+                  Title="Cut"/>
+    
     <ShellContent ContentTemplate="{DataTemplate local:SettingsPage}"
                   Route="SettingsPage"
                   Title="Settings"/>

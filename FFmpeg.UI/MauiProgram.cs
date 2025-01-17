@@ -1,4 +1,6 @@
 ﻿using CommunityToolkit.Maui;
+using MauiIcons.Core;
+using MauiIcons.SegoeFluent;
 using Microsoft.Extensions.Logging;
 
 namespace FFmpeg.UI
@@ -10,6 +12,8 @@ namespace FFmpeg.UI
             var builder = MauiApp.CreateBuilder();
             builder
                 .UseMauiApp<App>()
+                .UseSegoeFluentMauiIcons()
+                .UseMauiIconsCore(x => x.SetDefaultIconSize(20.0))
                 .UseMauiCommunityToolkit()
                 .UseMauiCommunityToolkitMediaElement()
                 .ConfigureFonts(fonts =>
