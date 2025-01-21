@@ -14,6 +14,8 @@
 <img src="Screenshoots/stab-preview-win.png" width="30%" />
 <img src="Screenshoots/stab-completed-win.png" width="30%" />
 <img src="Screenshoots/settings-win.png" width="30%" />
+<img src="Screenshoots/crop-preview.png" width="30%" />
+<img src="Screenshoots/crop-selecting.png" width="30%" />
 <img src="Screenshoots/main-page-android.png" width="20%" />
 </div>
 </div>
@@ -23,6 +25,7 @@
 - Stabilize videos.
 - View videos preview.
 - Generate merged video for result comparison.
+- Crop videos by selected rectangle.
   
 App use local instance of FFMpeg, you should add folder with ffmpeg to PATH or specify folder in app settings.  
 Android use [Laerdal.FFmpeg.Full.Gpl](https://github.com/Laerdal/Laerdal.FFmpeg) ffmpeg implementation.
